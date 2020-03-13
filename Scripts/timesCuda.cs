@@ -9,48 +9,27 @@ public class timesCuda : MonoBehaviour
     private Model model;
     private IWorker worker;
     Dictionary<string, Tensor> inputs = new Dictionary<string, Tensor>();
-     private IEnumerator ExecuteModel()
-    {
-        Debug.Log("Go");
-        // Create input and Execute model
-        yield return worker.ExecuteAsync(inputs);
-
-        // Get outputs
-
-
-    }
-
     // Start is called before the first frame update
     void Start()
     {
         model = ModelLoader.Load(modelSource);
         worker = BarracudaWorkerFactory.CreateWorker(BarracudaWorkerFactory.Type.ComputePrecompiled, model);
         
-        Texture2D tex = (Texture2D)Resources.Load("img_7");
+        Texture2D tex = (Texture2D)Resources.Load("img_7"); // これ32*32で読み込んでしまうので修正。
         var pixel = tex.GetPixels(0, 0, 28, 28);
         var tex2 = new Texture2D(28, 28); 
         tex2.SetPixels(pixel);
         tex2.Apply();
-        inputs["0"] = new Tensor(tex2, 1);
+        inputs["0"] = new Tensor(tex2, 1); 
         worker.Execute(inputs["0"]);
-        
-        var O = worker.PeekOutput();
-        Debug.Log(O.GetType());// [1, 1, 1, 10]
-        Debug.Log(O.data.GetMaxCount());
-        var o = O.data.Download(10);// [ -1, -1, ]
-        int maxI = -1;
-        float max = -1000;
-        for(int i =0; i < 10; i++)
+        Tensor output = worker.PeekOutput();
+        Debug.Log(output.GetType());// Barracuda.Tensor型
+        Debug.Log(output.data.GetMaxCount()); //
+        for(int i = 0; i < 10; i++)
         {
-            //Debug.Log(o[i]);
-            if(max < o[i])
-            {
-                maxI = i;
-                max = o[i];
-            }
+            Debug.Log(output[i]);
         }
-        Debug.Log($"predict: {maxI}");
-        O.Dispose();
+        output.Dispose(); // Dispose()で終了させないとダメらしい
         worker.Dispose();
         Debug.Log("end");
     }
